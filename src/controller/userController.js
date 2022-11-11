@@ -1,7 +1,8 @@
 const User=require('../models/userModel')
-const {isValid,isValidBody,validString,validEmail,validPwd,isValidObjectId}=require('../util/validtion')
+const {isValid,isValidBody,validString,validEmail,validPwd,isValidObjectId, validEmpId}=require('../util/validtion')
 const bcrypt=require('bcrypt')
 const jwt=require('jsonwebtoken')
+const mongoose=require('mongoose')
 
 // ==========================employee registration================
 const createEmployee=async (req,res)=>{
@@ -30,17 +31,18 @@ try {
   }
 
   if(!employeeId){
-    return res.status(400).json({status:false, msg:"employee id is requried"})
-  }else if(!validString(employeeId)){
-    return res.status(400).json({status:false, msg:"employee id use company first two letter then your id like Ur11"})
+    return res.status(400).json({status:false, msg:"employee id is requied"})
   }
-  const checkEmployeeId=await User.findOne({employeeId:employeeId})
-  if(!checkEmployeeId){
-    return res.status(400).json({status:false, msg:"emp id is unique"})
-  }  
-
+  let checkEmployeeId=await User.findOne({employeeId:employeeId});
+  if(checkEmployeeId){
+    // console.log("hiii")
+    return res.status(400).json({status:false, msg:"duplicate emp id not allowed"})
+  }
+  if(!validEmpId(employeeId)){
+    return res.status(400).json({status:false, msg:"employee id only be number"})
+  }
   if(!password){
-    return res.status(400).json({status:false, msg:"employee id is requried"})
+    return res.status(400).json({status:false, msg:"password is requried"})
   }else if(validPwd(password)){
     return res.status(400).json({status:false, msg:"Password should be 8-15 characters long and must contain one of 0-9,A-Z,a-z and special characters"})
   }
@@ -144,7 +146,8 @@ const empLogin = async (req, res)=> {
   const getAllEmp=async (req,res)=>{
 
     try {
-      const allEmp=await User.find();
+      const allEmp=await User.find().sort({fName:1})
+
       if(!allEmp){
           return res.status(400).json({status:false, msg:"invalid requrest"})
       }
@@ -166,7 +169,9 @@ const empLogin = async (req, res)=> {
               return res.status(400).json({status:false, msg:"id is not found"})
           }
           const chechID=await User.findById(id)
-         
+         if(!chechID){
+          return res.status(400).json({status:false, msg:"wrong employee id"})
+         }
           res.status(200).json({status:true, msg:"find employee by id ",data:chechID})
          
     } catch (error) {
@@ -179,30 +184,86 @@ const empLogin = async (req, res)=> {
 
   const updateEmp=async (req,res)=>{
     try {
-      let empId=req.params.empid;
-      let checkEmpId=await User.findById(empId);
+      let id=req.params.id;
+      let checkEmpId=await User.findById(id);
       if(!checkEmpId){
         return res.status(400).json({status:false, msg:"not found the employee"})
       }
       let data=req.body;
-      let {fName,lName,email,password,orgName,empid}=data
+      let {fName,lName,email,password,orgName,employeeId}=data
+      let empUpdate={}
       if(isValidBody(data)){
         return res.status(400).json({status:false, msg:"data is requried to anything to be updated"})
       }
+      if(fName){
+        if(validString(fName)){
+          return res.status(400).json({status:false, msg:"fName should be only string"})
+        }else if(isValid(fName)){
+          return res.status(400).json({status:false, msg:"if emplty then not change"})
+        }
+       
+        empUpdate.fName=fName
+      }
 
-      if(validString(fName)||validString(lName)||validString(orgName)){
-        return res.status(400).json({status:false, msg:"first name should be only charactor"})
+      if(lName){
+        if(validString(lName)){
+          return res.status(400).json({status:false, msg:"lName should be only string"})
+        }else if(isValid(lName)){
+          return res.status(400).json({status:false, msg:"if emplty then not change"})
+        }
+        empUpdate.lName=lName
       }
-      if(hasOwnProperty(email)){
-          const checkEmail=await User.findOne({email:email});
-          if(checkEmail){
-            return res.status(400).json({status:false, msg:"same email not change"})
-          }
+
+      if(orgName){
+        if(validString(orgName)){
+          return res.status(400).json({status:false, msg:"orgName should be only string"})
+        }else if(isValid(orgName)){
+          return res.status(400).json({status:false, msg:"if emplty then not change"})
+        }
+        empUpdate.orgName=orgName
       }
-      if(validPwd(password)){
-        return res.status(400).json({status:false, msg:"Password should be 8-15 characters long and must contain one of 0-9,A-Z,a-z and special characters"})
+
+      if(employeeId){
+        if(validEmpId(employeeId)){
+          return res.status(400).json({status:false, msg:"employee only be number"})
+        }else if(isValid(employeeId)){
+          return res.status(400).json({status:false, msg:"if chenge then requeired"})
+        }
+        const validEmp=await User.findOne({employeeId:employeeId})
+        if(validEmp){
+          return res.status(400).json({status:false, msg:"same emeployee id not be change"})
+        }
+        empUpdate.employeeId=employeeId;
       }
-      return res.status(200).json({status:true, msg:"Emp data Update Successfully", data:data})
+
+      if(email){
+        if(validEmail(email)){
+          return res.status(400).json({status:false, msg:"enter a valid email"})
+        }else if(isValid(email)){
+          return res.status(400).json({status:false, msg:"if chenge then requeiredemail"})
+        }
+        const validEmail=await User.findOne({email:email})
+        if(validEmail){
+          return res.status(400).json({status:false, msg:"same email id not be change"})
+        }
+        empUpdate.email=email;
+      }
+
+      if(password){
+        if(validPwd(password)){
+          return res.status(400).json({status:false, msg:"Password should be 8-15 characters long and must contain one of 0-9,A-Z,a-z and special characters"})
+        }
+        // else if(isValid(password)){
+        //   return res.status(400).json({status:false, msg:"if chenge then requeired email"})
+        // }
+        const validPassword=await User.findOne({password:password})
+        if(validPassword){
+          return res.status(400).json({status:false, msg:"same password not be change"})
+        }
+        empUpdate.password=password;
+      }
+      const update=await User.findOneAndUpdate(id,empUpdate,{new:true})
+      return res.status(200).json({status:true, msg:"Emp data Update Successfully", data:update})
     } catch (error) {
       console.log(error)
       res.status(500).json({status:false, msg:error})

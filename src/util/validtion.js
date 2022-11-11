@@ -1,9 +1,9 @@
 const mongoose = require("mongoose");
 
 const isValid = function (value) {
-  if (typeof value === "undefined" || value === null) return false;
-  if (typeof value === "string" && value.trim().length === 0) return false;
-  return true;
+  if (typeof value === "undefined" || value === null) return true;
+  if (typeof value === "string" && value.trim().length === 0) return true;
+  return false;
 };
 
 const isValidObjectType = (value) => {
@@ -52,17 +52,17 @@ const validPwd = (Password) => {
   }
 };
 
-// const validEmpId = (employeeId) => {
-//   if (/[a-z]{2}-[0-9]{4};/.test(employeeId)) {
-//     return true;
-//   } else {
-//     return true;
-//   }
-// };
+const validEmpId = (employeeId) => {
+  if (/^[1-9]\d{4}$/.test(employeeId)) {
+    return true;
+  } else {
+    return true;
+  }
+};
 const isValidObjectId = (objectId) => {
   return mongoose.Types.ObjectId.isValid(objectId);
 };
 
 
 
-module.exports = {isValid,isValidObjectType,isValidBody,validString,validEmail,validPwd,isValidObjectId};
+module.exports = {isValid,isValidObjectType,isValidBody,validString,validEmail,validPwd,isValidObjectId,validEmpId};
